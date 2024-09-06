@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: whatsappbot_app
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=root
+      - DB_DATABASE=whatsappbot
+      - DB_DIALECT=postgres
+      - RABBITMQ_URL=amqp://rabbitmq
+    ports:
+      - "3001:3001"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_started
+    networks:
+      - whatsappbot_network
+    restart: on-failure
+
+  db:
+    image: postgres:14
+    container_name: whatsappbot_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: whatsappbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - whatsappbot_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: whatsappbot_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - whatsappbot_network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  whatsappbot_network:
+    driver: bridge
